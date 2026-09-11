@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://nexus_user:nexus_pass@db:5432/nexus_db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - nexus-network
+
+  worker:
+    build: .
+    command: python -m nexus.worker
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - nexus-network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: nexus_user
+      POSTGRES_PASSWORD: nexus_pass
+      POSTGRES_DB: nexus_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nexus-network
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - nexus-network
+
+networks:
+  nexus-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
